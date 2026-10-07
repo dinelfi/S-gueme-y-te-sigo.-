@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoinFollow - Sígueme y Te Sigo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        },
+                        neon: {
+                            pink: '#ff007f',
+                            purple: '#9d00ff',
+                            cyan: '#00f0ff',
+                            gold: '#ffb700',
+                            green: '#00ff66'
+                        }
+                    },
+                    boxShadow: {
+                        'neon-pink': '0 0 15px rgba(255, 0, 127, 0.4)',
+                        'neon-cyan': '0 0 15px rgba(0, 240, 255, 0.4)',
+                        'neon-gold': '0 0 15px rgba(255, 183, 0, 0.4)',
+                        'neon-purple': '0 0 20px rgba(157, 0, 255, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Ambient Glow Background Effects */
+        .glow-bg-1 {
+            position: fixed;
+            top: -10%;
+            left: -10%;
+            width: 40vw;
+            height: 40vw;
+            background: radial-gradient(circle, rgba(157,0,255,0.15) 0%, rgba(0,0,0,0) 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+        .glow-bg-2 {
+            position: fixed;
+            bottom: -10%;
+            right: -10%;
+            width: 45vw;
+            height: 45vw;
+            background: radial-gradient(circle, rgba(0,240,255,0.12) 0%, rgba(0,0,0,0) 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Glassmorphism Cards */
+        .glass-card {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        /* Coin pulse animation */
+        @keyframes coinBounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-4px) scale(1.1); }
+        }
+        .animate-coin {
+            animation: coinBounce 2s infinite ease-in-out;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Toast Popup Animation */
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-slide {
+            animation: slideInRight 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- Ambient background lights -->
+    <div class="glow-bg-1"></div>
+    <div class="glow-bg-2"></div>
+
+    <!-- HEADER -->
+    <header class="sticky top-0 z-40 glass-card border-b border-gray-800/80 px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <!-- Logo -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('feed')">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-neon-purple to-neon-pink flex items-center justify-center text-white text-xl font-black shadow-neon-pink">
+                    <i class="fa-solid fa-coins"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-neon-cyan tracking-wide">
+                        CoinFollow
+                    </span>
+                    <span class="hidden sm:inline-block text-[10px] bg-neon-purple/20 text-neon-pink px-2 py-0.5 rounded-full font-bold ml-1 uppercase border border-neon-purple/30">
+                        Pro Exchange
+                    </span>
+                </div>
+            </div>
+
+            <!-- Stats & Coin Counter -->
+            <div class="flex items-center space-x-3 sm:space-x-6">
+                <!-- Daily Reward Button -->
+                <button id="daily-bonus-btn" onclick="claimDailyBonus()" class="hidden sm:flex items-center space-x-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 px-3 py-1.5 rounded-full text-xs font-semibold transition-all shadow-neon-gold">
+                    <i class="fa-solid fa-gift text-amber-400 animate-bounce"></i>
+                    <span>Bono Diario</span>
+                </button>
+
+                <!-- Coin Balance Pill -->
+                <div class="flex items-center bg-gray-900/90 border border-yellow-500/40 rounded-full px-3.5 py-1.5 space-x-2 shadow-neon-gold transition-all duration-300" id="coin-pill">
+                    <i class="fa-solid fa-coins text-yellow-400 text-lg animate-coin"></i>
+                    <span id="user-coins" class="text-yellow-400 font-extrabold text-base tracking-wider">0</span>
+                    <span class="text-xs text-yellow-500/80 font-medium">monedas</span>
+                </div>
+
+                <!-- User Avatar -->
+                <div class="relative">
+                    <img id="user-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=ProUser1" alt="Avatar" class="w-9 h-9 rounded-full border-2 border-neon-cyan shadow-neon-cyan bg-gray-800">
+                    <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-neon-green rounded-full border-2 border-gray-900"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6 flex-grow w-full">
+        <!-- Navigation Tabs -->
+        <div class="flex items-center justify-between flex-wrap gap-4 mb-8 bg-gray-900/60 p-1.5 rounded-2xl border border-gray-800">
+            <nav class="flex space-x-1 sm:space-x-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+                <button onclick="switchTab('feed')" id="tab-feed" class="nav-tab active-tab flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all text-white bg-gradient-to-r from-brand-600 to-neon-purple shadow-lg">
+                    <i class="fa-solid fa-users-viewfinder"></i>
+                    <span>Ganar Monedas</span>
+                </button>
+                <button onclick="switchTab('promote')" id="tab-promote" class="nav-tab flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-400 hover:text-white hover:bg-gray-800/60">
+                    <i class="fa-solid fa-bullhorn text-neon-pink"></i>
+                    <span>Promocionar Mi Perfil</span>
+                </button>
+                <button onclick="switchTab('quests')" id="tab-quests" class="nav-tab flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-400 hover:text-white hover:bg-gray-800/60 relative">
+                    <i class="fa-solid fa-trophy text-yellow-400"></i>
+                    <span>Misiones</span>
+                    <span id="quest-badge" class="w-2 h-2 rounded-full bg-neon-pink absolute top-2 right-2"></span>
+                </button>
+                <button onclick="switchTab('my-campaigns')" id="tab-my-campaigns" class="nav-tab flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-400 hover:text-white hover:bg-gray-800/60">
+                    <i class="fa-solid fa-list-check text-neon-cyan"></i>
+                    <span>Mis Campañas</span>
+                </button>
+            </nav>
+
+            <!-- Quick Action for Mobile Bonus -->
+            <button onclick="claimDailyBonus()" class="sm:hidden w-full flex items-center justify-center space-x-2 bg-amber-500/20 border border-amber-500/40 text-amber-300 py-2 rounded-xl text-xs font-semibold">
+                <i class="fa-solid fa-gift text-amber-400"></i>
+                <span>Reclamar Bono Diario</span>
+            </button>
+        </div>
+
+        <!-- TAB CONTENT: FEED (Ganar Monedas) -->
+        <section id="content-feed" class="tab-content space-y-6">
+            <!-- Header Banner -->
+            <div class="glass-card rounded-3xl p-6 sm:p-8 relative overflow-hidden border border-indigo-500/20">
+                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-neon-purple/10 rounded-full blur-3xl"></div>
+                <div class="relative z-10 max-w-2xl space-y-3">
+                    <span class="px-3 py-1 bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 text-xs font-bold rounded-full uppercase tracking-wider">
+                        <i class="fa-solid fa-bolt mr-1"></i> Intercambio Activo
+                    </span>
+                    <h1 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+                        ¡Sigue a creadores y suma <span class="bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-amber-200">monedas al instante</span>!
+                    </h1>
+                    <p class="text-gray-400 text-sm sm:text-base">
+                        Elige una red social, abre el enlace del usuario, presiona seguir y confirma para recibir tus recompensas directamente en tu saldo.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Social Filters -->
+            <div class="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
+                <button onclick="filterSocial('all')" class="social-filter-btn active-filter px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border border-neon-purple/50 bg-neon-purple/20 text-white whitespace-nowrap">
+                    <i class="fa-solid fa-globe mr-1.5"></i> Todas las Redes
+                </button>
+                <button onclick="filterSocial('instagram')" class="social-filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border border-gray-800 bg-gray-900/60 text-gray-400 hover:text-white whitespace-nowrap">
+                    <i class="fa-brands fa-instagram text-pink-500 mr-1.5"></i> Instagram
+                </button>
+                <button onclick="filterSocial('tiktok')" class="social-filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border border-gray-800 bg-gray-900/60 text-gray-400 hover:text-white whitespace-nowrap">
+                    <i class="fa-brands fa-tiktok text-cyan-400 mr-1.5"></i> TikTok
+                </button>
+                <button onclick="filterSocial('youtube')" class="social-filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border border-gray-800 bg-gray-900/60 text-gray-400 hover:text-white whitespace-nowrap">
+                    <i class="fa-brands fa-youtube text-red-500 mr-1.5"></i> YouTube
+                </button>
+                <button onclick="filterSocial('twitch')" class="social-filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border border-gray-800 bg-gray-900/60 text-gray-400 hover:text-white whitespace-nowrap">
+                    <i class="fa-brands fa-twitch text-purple-400 mr-1.5"></i> Twitch
+                </button>
+                <button onclick="filterSocial('x')" class="social-filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border border-gray-800 bg-gray-900/60 text-gray-400 hover:text-white whitespace-nowrap">
+                    <i class="fa-brands fa-x-twitter text-gray-300 mr-1.5"></i> X (Twitter)
+                </button>
+            </div>
+
+            <!-- Profiles Grid -->
+            <div id="profiles-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Dynamic profile cards will load here -->
+            </div>
+
+            <!-- Empty State Feed -->
+            <div id="feed-empty-state" class="hidden text-center py-16 glass-card rounded-3xl">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-800/80 flex items-center justify-center text-gray-500 text-2xl">
+                    <i class="fa-solid fa-check-double"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-300">¡Has completado todas las cuentas disponibles!</h3>
+                <p class="text-gray-500 text-sm max-w-md mx-auto mt-1">Regresa más tarde para ver nuevas cuentas promocionadas o crea tu propia campaña.</p>
+                <button onclick="switchTab('promote')" class="mt-4 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl text-sm transition-all shadow-lg">
+                    Promocionar Mi Cuenta
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: PROMOTE (Promocionar mi cuenta) -->
+        <section id="content-promote" class="tab-content hidden max-w-2xl mx-auto space-y-6">
+            <div class="glass-card rounded-3xl p-6 sm:p-8 border border-neon-pink/30 shadow-neon-purple">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-neon-pink to-purple-600 flex items-center justify-center text-white text-xl">
+                        <i class="fa-solid fa-rocket"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-extrabold text-white">Lanza tu Campaña de Seguidores</h2>
+                        <p class="text-xs text-gray-400">Ofrece monedas de tu saldo a otros usuarios para que te sigan.</p>
+                    </div>
+                </div>
+
+                <form id="create-campaign-form" onsubmit="handleCreateCampaign(event)" class="space-y-5">
+                    <!-- Red Social -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Selecciona la Red Social</label>
+                        <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="platform" value="instagram" checked class="peer hidden">
+                                <div class="p-3 rounded-xl border border-gray-800 bg-gray-900/60 text-center peer-checked:border-pink-500 peer-checked:bg-pink-500/10 peer-checked:text-pink-400 transition-all">
+                                    <i class="fa-brands fa-instagram text-xl block mb-1"></i>
+                                    <span class="text-[11px] font-bold">Instagram</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="platform" value="tiktok" class="peer hidden">
+                                <div class="p-3 rounded-xl border border-gray-800 bg-gray-900/60 text-center peer-checked:border-cyan-400 peer-checked:bg-cyan-400/10 peer-checked:text-cyan-300 transition-all">
+                                    <i class="fa-brands fa-tiktok text-xl block mb-1"></i>
+                                    <span class="text-[11px] font-bold">TikTok</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="platform" value="youtube" class="peer hidden">
+                                <div class="p-3 rounded-xl border border-gray-800 bg-gray-900/60 text-center peer-checked:border-red-500 peer-checked:bg-red-500/10 peer-checked:text-red-400 transition-all">
+                                    <i class="fa-brands fa-youtube text-xl block mb-1"></i>
+                                    <span class="text-[11px] font-bold">YouTube</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="platform" value="twitch" class="peer hidden">
+                                <div class="p-3 rounded-xl border border-gray-800 bg-gray-900/60 text-center peer-checked:border-purple-500 peer-checked:bg-purple-500/10 peer-checked:text-purple-400 transition-all">
+                                    <i class="fa-brands fa-twitch text-xl block mb-1"></i>
+                                    <span class="text-[11px] font-bold">Twitch</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="platform" value="x" class="peer hidden">
+                                <div class="p-3 rounded-xl border border-gray-800 bg-gray-900/60 text-center peer-checked:border-gray-400 peer-checked:bg-gray-700/20 peer-checked:text-white transition-all">
+                                    <i class="fa-brands fa-x-twitter text-xl block mb-1"></i>
+                                    <span class="text-[11px] font-bold">X (Twitter)</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Nombre de Usuario / Handle -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Usuario o Nombre de Perfil</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-500 text-sm">@</span>
+                            <input type="text" id="campaign-username" required placeholder="tu_usuario" class="w-full pl-8 pr-4 py-3 bg-gray-900/90 border border-gray-800 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-neon-pink focus:ring-1 focus:ring-neon-pink text-sm">
+                        </div>
+                    </div>
+
+                    <!-- URL del Perfil -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Enlace Directo a tu Perfil</label>
+                        <input type="url" id="campaign-url" required placeholder="https://instagram.com/tu_usuario" class="w-full px-4 py-3 bg-gray-900/90 border border-gray-800 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-neon-pink focus:ring-1 focus:ring-neon-pink text-sm">
+                    </div>
+
+                    <!-- Configuración de Monedas y Seguidores -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
+                                Monedas por Seguidor
+                            </label>
+                            <select id="campaign-reward" onchange="calculateCampaignCost()" class="w-full px-4 py-3 bg-gray-900/90 border border-gray-800 rounded-xl text-white focus:outline-none focus:border-neon-pink text-sm">
+                                <option value="15">15 Monedas (Estándar)</option>
+                                <option value="25">25 Monedas (Rápido)</option>
+                                <option value="50">50 Monedas (VIP Express ⭐)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
+                                Seguidores Deseados
+                            </label>
+                            <input type="number" id="campaign-target" min="5" max="500" value="10" oninput="calculateCampaignCost()" required class="w-full px-4 py-3 bg-gray-900/90 border border-gray-800 rounded-xl text-white focus:outline-none focus:border-neon-pink text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Resumen del Costo -->
+                    <div class="p-4 rounded-2xl bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-400 font-medium">Costo Total de la Campaña:</p>
+                            <p class="text-xs text-gray-500">Se descontará de tu balance inmediatamente</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-coins text-yellow-400 text-xl"></i>
+                            <span id="campaign-total-cost" class="text-2xl font-black text-yellow-400">150</span>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-neon-pink via-purple-600 to-neon-cyan text-white font-extrabold rounded-xl shadow-neon-pink hover:opacity-95 transition-all text-sm uppercase tracking-wider flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Publicar Campaña Ahora</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: QUESTS (Misiones Diarias) -->
+        <section id="content-quests" class="tab-content hidden space-y-6">
+            <div class="glass-card rounded-3xl p-6 sm:p-8 border border-yellow-500/20">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-yellow-500 to-amber-600 flex items-center justify-center text-white text-xl shadow-neon-gold">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-extrabold text-white">Misiones & Logros Diarios</h2>
+                        <p class="text-xs text-gray-400">Completa tareas dentro de la plataforma para desbloquear recompensas masivas.</p>
+                    </div>
+                </div>
+
+                <div id="quests-container" class="space-y-4">
+                    <!-- Dynamic quests list -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: MY CAMPAIGNS -->
+        <section id="content-my-campaigns" class="tab-content hidden space-y-6">
+            <div class="glass-card rounded-3xl p-6 sm:p-8">
+                <div class="flex items-center justify-between mb-6 flex-wrap gap-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-neon-cyan to-blue-600 flex items-center justify-center text-white text-xl shadow-neon-cyan">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-extrabold text-white">Estado de Mis Campañas</h2>
+                            <p class="text-xs text-gray-400">Monitorea los seguidores que has recibido en tiempo real.</p>
+                        </div>
+                    </div>
+                    <button onclick="switchTab('promote')" class="px-4 py-2 bg-neon-pink/20 text-neon-pink border border-neon-pink/40 hover:bg-neon-pink/30 font-bold rounded-xl text-xs transition-all flex items-center space-x-2">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Nueva Campaña</span>
+                    </button>
+                </div>
+
+                <div id="my-campaigns-list" class="space-y-4">
+                    <!-- Dynamic active campaigns list -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- FOLLOW CONFIRMATION MODAL -->
+    <div id="follow-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="glass-card max-w-sm w-full rounded-3xl p-6 border border-gray-700 shadow-2xl relative text-center space-y-4">
+            <button onclick="closeFollowModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="w-16 h-16 rounded-full bg-gray-800 mx-auto flex items-center justify-center text-3xl text-neon-cyan border border-neon-cyan/40" id="modal-social-icon">
+                <i class="fa-brands fa-instagram"></i>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-bold text-white">Seguir a <span id="modal-username" class="text-neon-cyan">@usuario</span></h3>
+                <p class="text-xs text-gray-400 mt-1">1. Haz clic en <strong class="text-white">"Abrir Perfil"</strong> para seguir la cuenta.<br>2. Regresa aquí y presiona <strong class="text-white font-bold text-neon-green">"Confirmar y Reclamar"</strong>.</p>
+            </div>
+
+            <div class="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl flex items-center justify-center space-x-2">
+                <span class="text-xs text-gray-300">Recompensa:</span>
+                <i class="fa-solid fa-coins text-yellow-400"></i>
+                <span id="modal-reward-coins" class="text-yellow-400 font-extrabold text-lg">+20</span>
+            </div>
+
+            <div class="space-y-2 pt-2">
+                <a id="modal-external-link" href="#" target="_blank" onclick="markLinkVisited()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl text-sm flex items-center justify-center space-x-2 block shadow-lg">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    <span>1. Abrir Perfil Externo</span>
+                </a>
+
+                <button id="modal-claim-btn" disabled onclick="confirmFollowAndReward()" class="w-full py-3 bg-gray-800 text-gray-500 cursor-not-allowed font-extrabold rounded-xl text-sm transition-all flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-check"></i>
+                    <span>2. Confirmar y Reclamar Monedas</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-gray-800/80 bg-gray-950/80 py-6 px-4 text-center text-xs text-gray-500">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-coins text-yellow-400"></i>
+                <span class="font-bold text-gray-400">CoinFollow System v2.0</span>
+            </div>
+            <p>Plataforma de Intercambio de Seguidores basada en Economía Digital Simulada.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Initial Mock Data
+        const DEFAULT_PROFILES = [
+            { id: 'p1', username: 'cyber_gamer99', platform: 'twitch', reward: 25, url: 'https://twitch.tv', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=cyber_gamer99' },
+            { id: 'p2', username: 'fitness_life_es', platform: 'instagram', reward: 15, url: 'https://instagram.com', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=fitness_life_es' },
+            { id: 'p3', username: 'tech_reviewer', platform: 'youtube', reward: 50, url: 'https://youtube.com', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=tech_reviewer' },
+            { id: 'p4', username: 'dance_viral_tik', platform: 'tiktok', reward: 20, url: 'https://tiktok.com', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=dance_viral_tik' },
+            { id: 'p5', username: 'crypto_news_x', platform: 'x', reward: 15, url: 'https://x.com', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=crypto_news_x' },
+            { id: 'p6', username: 'arte_digital_pro', platform: 'instagram', reward: 25, url: 'https://instagram.com', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=arte_digital_pro' },
+        ];
+
+        const DEFAULT_QUESTS = [
+            { id: 'q1', title: 'Comienzo Rápido', desc: 'Sigue a 3 usuarios cualesquiera', required: 3, current: 0, reward: 50, claimed: false },
+            { id: 'q2', title: 'Influencer en Crecimiento', desc: 'Crea tu primera campaña de promoción', required: 1, current: 0, reward: 100, claimed: false },
+            { id: 'q3', title: 'Coleccionista de Monedas', desc: 'Sigue a 8 usuarios', required: 8, current: 0, reward: 150, claimed: false }
+        ];
+
+        // State Management
+        let state = {
+            coins: 100,
+            followedIds: [],
+            dailyBonusClaimedDate: null,
+            profiles: DEFAULT_PROFILES,
+            myCampaigns: [],
+            quests: DEFAULT_QUESTS,
+            activeFilter: 'all',
+            pendingProfileModal: null
+        };
+
+        // Load State from LocalStorage
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('coin_follow_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state = { ...state, ...parsed };
+                }
+            } catch (e) {
+                console.error("Failed to load local state", e);
+            }
+            updateCoinsUI();
+            renderFeed();
+            renderQuests();
+            renderMyCampaigns();
+            checkDailyBonusState();
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem('coin_follow_state', JSON.stringify(state));
+            } catch (e) {
+                console.error("Failed to save state", e);
+            }
+        }
+
+        // Update Balance UI with animation
+        function updateCoinsUI() {
+            const coinEl = document.getElementById('user-coins');
+            const pill = document.getElementById('coin-pill');
+            
+            if (coinEl) {
+                coinEl.textContent = state.coins.toLocaleString();
+            }
+
+            if (pill) {
+                pill.classList.add('scale-110', 'border-yellow-300');
+                setTimeout(() => {
+                    pill.classList.remove('scale-110', 'border-yellow-300');
+                }, 300);
+            }
+        }
+
+        // Tab Switcher
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-tab').forEach(el => {
+                el.classList.remove('active-tab', 'text-white', 'bg-gradient-to-r', 'from-brand-600', 'to-neon-purple', 'shadow-lg');
+                el.classList.add('text-gray-400');
+            });
+
+            const contentEl = document.getElementById(`content-${tabId}`);
+            const tabBtn = document.getElementById(`tab-${tabId}`);
+
+            if (contentEl && tabBtn) {
+                contentEl.classList.remove('hidden');
+                tabBtn.classList.add('active-tab', 'text-white', 'bg-gradient-to-r', 'from-brand-600', 'to-neon-purple', 'shadow-lg');
+                tabBtn.classList.remove('text-gray-400');
+            }
+        }
+
+        // Social Icons Helper
+        function getPlatformConfig(platform) {
+            switch(platform.toLowerCase()) {
+                case 'instagram':
+                    return { icon: 'fa-brands fa-instagram', color: 'text-pink-500', bg: 'bg-pink-500/10', border: 'border-pink-500/30' };
+                case 'tiktok':
+                    return { icon: 'fa-brands fa-tiktok', color: 'text-cyan-400', bg: 'bg-cyan-400/10', border: 'border-cyan-400/30' };
+                case 'youtube':
+                    return { icon: 'fa-brands fa-youtube', color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' };
+                case 'twitch':
+                    return { icon: 'fa-brands fa-twitch', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30' };
+                case 'x':
+                    return { icon: 'fa-brands fa-x-twitter', color: 'text-gray-300', bg: 'bg-gray-500/10', border: 'border-gray-500/30' };
+                default:
+                    return { icon: 'fa-solid fa-globe', color: 'text-brand-500', bg: 'bg-brand-500/10', border: 'border-brand-500/30' };
+            }
+        }
+
+        // Render Feed Profiles
+        function renderFeed() {
+            const grid = document.getElementById('profiles-grid');
+            const emptyState = document.getElementById('feed-empty-state');
+            grid.innerHTML = '';
+
+            const available = state.profiles.filter(p => !state.followedIds.includes(p.id) && (state.activeFilter === 'all' || p.platform === state.activeFilter));
+
+            if (available.length === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                grid.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+            }
+
+            available.forEach(profile => {
+                const pConfig = getPlatformConfig(profile.platform);
+                const card = document.createElement('div');
+                card.className = "glass-card rounded-2xl p-5 border border-gray-800 hover:border-gray-700 transition-all duration-300 flex flex-col justify-between space-y-4 hover:-translate-y-1";
+                card.id = `card-${profile.id}`;
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center space-x-3">
+                            <img src="${profile.avatar}" class="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 p-0.5">
+                            <div>
+                                <h4 class="font-extrabold text-white text-base leading-snug">@${profile.username}</h4>
+                                <span class="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-md ${pConfig.bg} ${pConfig.color} ${pConfig.border} border mt-1">
+                                    <i class="${pConfig.icon} mr-1"></i> ${profile.platform.toUpperCase()}
+                                </span>
+                            </div>
+                        </div>
+                        ${profile.reward >= 50 ? '<span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold">VIP</span>' : ''}
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-gray-800/80">
+                        <div class="flex items-center space-x-1.5">
+                            <i class="fa-solid fa-coins text-yellow-400 text-base"></i>
+                            <span class="text-yellow-400 font-extrabold text-lg">+${profile.reward}</span>
+                        </div>
+                        <button onclick="openFollowModal('${profile.id}')" class="px-4 py-2 bg-gradient-to-r from-neon-purple to-brand-600 hover:from-neon-purple hover:to-brand-500 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 transition-all shadow-md active:scale-95">
+                            <i class="fa-solid fa-user-plus"></i>
+                            <span>Seguir</span>
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Filter Feed by Social Platform
+        function filterSocial(platform) {
+            state.activeFilter = platform;
+            document.querySelectorAll('.social-filter-btn').forEach(btn => {
+                btn.classList.remove('active-filter', 'border-neon-purple/50', 'bg-neon-purple/20', 'text-white');
+                btn.classList.add('border-gray-800', 'bg-gray-900/60', 'text-gray-400');
+            });
+
+            event.currentTarget.classList.add('active-filter', 'border-neon-purple/50', 'bg-neon-purple/20', 'text-white');
+            event.currentTarget.classList.remove('border-gray-800', 'bg-gray-900/60', 'text-gray-400');
+
+            renderFeed();
+        }
+
+        // Modal Handlers
+        function openFollowModal(profileId) {
+            const profile = state.profiles.find(p => p.id === profileId);
+            if (!profile) return;
+
+            state.pendingProfileModal = profile;
+            const pConfig = getPlatformConfig(profile.platform);
+
+            const modalSocialIcon = document.getElementById('modal-social-icon');
+            modalSocialIcon.className = `w-16 h-16 rounded-full mx-auto flex items-center justify-center text-3xl border ${pConfig.bg} ${pConfig.color} ${pConfig.border}`;
+            modalSocialIcon.innerHTML = `<i class="${pConfig.icon}"></i>`;
+
+            document.getElementById('modal-username').textContent = `@${profile.username}`;
+            document.getElementById('modal-reward-coins').textContent = `+${profile.reward}`;
+            document.getElementById('modal-external-link').href = profile.url;
+
+            // Reset claim button state
+            const claimBtn = document.getElementById('modal-claim-btn');
+            claimBtn.disabled = true;
+            claimBtn.className = "w-full py-3 bg-gray-800 text-gray-500 cursor-not-allowed font-extrabold rounded-xl text-sm transition-all flex items-center justify-center space-x-2";
+
+            document.getElementById('follow-modal').classList.remove('hidden');
+        }
+
+        function closeFollowModal() {
+            document.getElementById('follow-modal').classList.add('hidden');
+            state.pendingProfileModal = null;
+        }
+
+        function markLinkVisited() {
+            const claimBtn = document.getElementById('modal-claim-btn');
+            claimBtn.disabled = false;
+            claimBtn.className = "w-full py-3 bg-gradient-to-r from-neon-green to-emerald-600 hover:opacity-95 text-gray-950 font-black rounded-xl text-sm transition-all flex items-center justify-center space-x-2 shadow-lg shadow-neon-green/20 animate-pulse";
+        }
+
+        function confirmFollowAndReward() {
+            const profile = state.pendingProfileModal;
+            if (!profile) return;
+
+            // Add coins & mark as followed
+            state.coins += profile.reward;
+            state.followedIds.push(profile.id);
+
+            // Update Quests progress
+            updateQuestProgress(1);
+
+            // Animate card removal
+            const cardEl = document.getElementById(`card-${profile.id}`);
+            if (cardEl) {
+                cardEl.classList.add('scale-95', 'opacity-0');
+            }
+
+            saveState();
+            updateCoinsUI();
+            showToast(`¡Has ganado +${profile.reward} monedas por seguir a @${profile.username}!`, 'success');
+            closeFollowModal();
+
+            setTimeout(() => {
+                renderFeed();
+            }, 300);
+        }
+
+        // Campaign Form Logic
+        function calculateCampaignCost() {
+            const rewardSelect = document.getElementById('campaign-reward');
+            const targetInput = document.getElementById('campaign-target');
+            const costEl = document.getElementById('campaign-total-cost');
+
+            const reward = parseInt(rewardSelect.value) || 15;
+            const target = parseInt(targetInput.value) || 0;
+
+            const totalCost = reward * target;
+            costEl.textContent = totalCost.toLocaleString();
+            return totalCost;
+        }
+
+        function handleCreateCampaign(e) {
+            e.preventDefault();
+            const platform = document.querySelector('input[name="platform"]:checked').value;
+            const username = document.getElementById('campaign-username').value.trim();
+            const url = document.getElementById('campaign-url').value.trim();
+            const reward = parseInt(document.getElementById('campaign-reward').value);
+            const target = parseInt(document.getElementById('campaign-target').value);
+            const totalCost = reward * target;
+
+            if (state.coins < totalCost) {
+                showToast(`Monedas insuficientes. Necesitas ${totalCost} monedas.`, 'error');
+                return;
+            }
+
+            // Deduct Coins
+            state.coins -= totalCost;
+
+            // Create New Campaign Entity
+            const newCampaign = {
+                id: 'camp_' + Date.now(),
+                username,
+                platform,
+                reward,
+                target,
+                received: 0,
+                url,
+                avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${username}`
+            };
+
+            state.myCampaigns.unshift(newCampaign);
+
+            // Also add to global profiles feed so other simulated users or yourself can view
+            state.profiles.unshift({
+                id: newCampaign.id,
+                username: newCampaign.username,
+                platform: newCampaign.platform,
+                reward: newCampaign.reward,
+                url: newCampaign.url,
+                avatar: newCampaign.avatar
+            });
+
+            // Update Quest for creating campaign
+            const campaignQuest = state.quests.find(q => q.id === 'q2');
+            if (campaignQuest && !campaignQuest.claimed) {
+                campaignQuest.current = Math.min(campaignQuest.required, campaignQuest.current + 1);
+            }
+
+            saveState();
+            updateCoinsUI();
+            renderMyCampaigns();
+            renderQuests();
+
+            showToast('¡Campaña publicada exitosamente!', 'success');
+            document.getElementById('create-campaign-form').reset();
+            calculateCampaignCost();
+
+            // Switch to My Campaigns tab
+            switchTab('my-campaigns');
+        }
+
+        // Render My Campaigns List
+        function renderMyCampaigns() {
+            const container = document.getElementById('my-campaigns-list');
+            container.innerHTML = '';
+
+            if (state.myCampaigns.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-gray-500">
+                        <i class="fa-solid fa-bullhorn text-3xl mb-2 block text-gray-600"></i>
+                        <p class="text-sm">Aún no has creado ninguna campaña de seguidores.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            state.myCampaigns.forEach(camp => {
+                const pConfig = getPlatformConfig(camp.platform);
+                const percent = Math.min(100, Math.round((camp.received / camp.target) * 100));
+
+                const item = document.createElement('div');
+                item.className = "p-4 rounded-2xl bg-gray-900/80 border border-gray-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4";
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <img src="${camp.avatar}" class="w-10 h-10 rounded-xl bg-gray-800">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <h4 class="font-bold text-white text-sm">@${camp.username}</h4>
+                                <span class="text-[10px] px-2 py-0.5 rounded ${pConfig.bg} ${pConfig.color} border ${pConfig.border}">
+                                    ${camp.platform.toUpperCase()}
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-0.5">Ofreciendo ${camp.reward} monedas por seguidor</p>
+                        </div>
+                    </div>
+
+                    <div class="w-full sm:w-48 space-y-1.5">
+                        <div class="flex justify-between text-xs font-semibold">
+                            <span class="text-gray-400">Progreso:</span>
+                            <span class="text-neon-cyan">${camp.received} / ${camp.target}</span>
+                        </div>
+                        <div class="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
+                            <div class="bg-gradient-to-r from-neon-cyan to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // Quests Logic
+        function updateQuestProgress(amount = 1) {
+            state.quests.forEach(quest => {
+                if (!quest.claimed) {
+                    if (quest.id === 'q1' || quest.id === 'q3') {
+                        quest.current = Math.min(quest.required, quest.current + amount);
+                    }
+                }
+            });
+            renderQuests();
+        }
+
+        function renderQuests() {
+            const container = document.getElementById('quests-container');
+            const questBadge = document.getElementById('quest-badge');
+            container.innerHTML = '';
+
+            let hasUnclaimed = false;
+
+            state.quests.forEach(q => {
+                const isReady = q.current >= q.required && !q.claimed;
+                if (isReady) hasUnclaimed = true;
+
+                const percent = Math.min(100, Math.round((q.current / q.required) * 100));
+
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-2xl glass-card border ${isReady ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-gray-800'} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4`;
+
+                card.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex items-center space-x-2">
+                            <h4 class="font-bold text-white text-sm">${q.title}</h4>
+                            <span class="text-xs text-yellow-400 font-extrabold flex items-center">
+                                <i class="fa-solid fa-coins mr-1"></i> +${q.reward}
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-400">${q.desc}</p>
+                        <div class="w-48 bg-gray-800 rounded-full h-1.5 mt-2">
+                            <div class="bg-yellow-400 h-full rounded-full" style="width: ${percent}%"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        ${q.claimed 
+                            ? `<span class="text-xs text-gray-500 font-bold px-3 py-1.5 rounded-xl bg-gray-800/50 inline-block"><i class="fa-solid fa-check mr-1"></i> Reclamado</span>`
+                            : `<button onclick="claimQuest('${q.id}')" ${!isReady ? 'disabled' : ''} class="px-4 py-2 rounded-xl text-xs font-extrabold transition-all ${isReady ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-gray-950 shadow-neon-gold hover:scale-105' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}">
+                                ${isReady ? 'Reclamar Recompensa' : `${q.current}/${q.required}`}
+                              </button>`
+                        }
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            if (questBadge) {
+                questBadge.style.display = hasUnclaimed ? 'block' : 'none';
+            }
+        }
+
+        function claimQuest(questId) {
+            const quest = state.quests.find(q => q.id === questId);
+            if (!quest || quest.claimed || quest.current < quest.required) return;
+
+            quest.claimed = true;
+            state.coins += quest.reward;
+
+            saveState();
+            updateCoinsUI();
+            renderQuests();
+            showToast(`¡Has reclamado ${quest.reward} monedas de la misión!`, 'success');
+        }
+
+        // Daily Bonus Logic
+        function checkDailyBonusState() {
+            const btn = document.getElementById('daily-bonus-btn');
+            const today = new Date().toDateString();
+
+            if (state.dailyBonusClaimedDate === today) {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.innerHTML = `<i class="fa-solid fa-check text-green-400"></i><span>Bono Reclamado</span>`;
+                }
+            }
+        }
+
+        function claimDailyBonus() {
+            const today = new Date().toDateString();
+            if (state.dailyBonusClaimedDate === today) {
+                showToast('Ya has reclamado tu bono diario de hoy. ¡Vuelve mañana!', 'info');
+                return;
+            }
+
+            const reward = 50;
+            state.coins += reward;
+            state.dailyBonusClaimedDate = today;
+
+            saveState();
+            updateCoinsUI();
+            checkDailyBonusState();
+            showToast(`¡Bono diario reclamado! +${reward} monedas agregadas.`, 'success');
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            let iconClass = 'fa-info-circle text-blue-400';
+            let borderClass = 'border-blue-500/40';
+
+            if (type === 'success') {
+                iconClass = 'fa-circle-check text-neon-green';
+                borderClass = 'border-neon-green/40';
+            } else if (type === 'error') {
+                iconClass = 'fa-circle-exclamation text-neon-pink';
+                borderClass = 'border-neon-pink/40';
+            }
+
+            toast.className = `toast-slide p-4 rounded-2xl glass-card border ${borderClass} shadow-2xl flex items-center space-x-3 text-sm text-white pointer-events-auto`;
+            toast.innerHTML = `
+                <i class="fa-solid ${iconClass} text-lg"></i>
+                <span class="font-medium text-xs sm:text-sm">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Initialization
+        window.onload = function() {
+            loadState();
+            calculateCampaignCost();
+        };
+    </script>
+</body>
+</html>
